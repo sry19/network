@@ -34,8 +34,10 @@ public class TestClient {
   public static void main(String... args) {
     System.out.println("Test Client");
     try {
-      // InetAddress local = InetAddress.getLocalHost();  // Can use InetAddress.getByName().
-      InetAddress local = InetAddress.getByName("192.168.0.107");
+      // InetAddress local = InetAddress.getLocalHost();
+      // Can use InetAddress.getByName().
+      //InetAddress local = InetAddress.getByName("192.168.0.107");
+      InetAddress local = InetAddress.getLocalHost();
       System.out.println("LocalHost: " + local);
       System.out.println("");
       Socket clientSocket = new Socket(local, SERVER_PORT);
@@ -86,9 +88,8 @@ public class TestClient {
     while (start < result.length) {
       byte[] tmp = Arrays.copyOfRange(result, start, min(start + BUFFER_SIZE, result.length));
       outputStream.write(tmp);
-      start += 16;
+      start += BUFFER_SIZE;
     }
-    //outputStream.write(result);
 
     InputStream inputStream = clientSocket.getInputStream();
     byte[] response = TestClient.getInputStreamBytes(inputStream);

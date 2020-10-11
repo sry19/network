@@ -1,9 +1,7 @@
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
-import org.graalvm.compiler.bytecode.Bytes;
+
 
 public class EvalServer {
   public static final int SERVER_PORT = 8080;
