@@ -76,9 +76,26 @@ public class Handler implements Runnable {
           }
           answer += sign*tmpAnswer;
           System.out.println(answer);
+          String stringAnswer = String.valueOf(answer);
+          int lengthOfAnswer = stringAnswer.length();
+          byte[] bytesOfLengthOfAnswer = new byte[2];
+          bytesOfLengthOfAnswer[0] = (byte) (lengthOfAnswer >> 8 & 0xFF);
+          bytesOfLengthOfAnswer[1] = (byte) (lengthOfAnswer & 0xFF);
+
+          byte[] answerToBytes = stringAnswer.getBytes();
+          byte[] newOutput = new byte[output.length+bytesOfLengthOfAnswer.length+answerToBytes.length];
+          System.arraycopy(output, 0, newOutput , 0, output.length);
+          System.arraycopy(bytesOfLengthOfAnswer, 0, newOutput , output.length, bytesOfLengthOfAnswer.length);
+          System.arraycopy(answerToBytes,0,newOutput,output.length+bytesOfLengthOfAnswer.length,answerToBytes.length);
+          output = newOutput;
+
+          System.out.println(new String(newOutput));
+
           idx += lenOfExpression;
           l--;
         }
+        OutputStream outputStream = clientSocket.getOutputStream();
+        outputStream.write(output);
 
         clientSocket.close();
       } catch (IOException ex) {
