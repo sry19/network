@@ -1,17 +1,26 @@
 import static java.lang.Character.isDigit;
+import static java.lang.Integer.min;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * The type Handler.
+ */
 public class Handler implements Runnable {
 
   private Socket clientSocket;
+  public static final int BUFFER_SIZE = 16;
 
+  /**
+   * Instantiates a new Handler.
+   *
+   * @param clientSocket the client socket
+   */
   public Handler(Socket clientSocket) {
     this.clientSocket = clientSocket;
   }
@@ -22,59 +31,62 @@ public class Handler implements Runnable {
     System.out.println(String.format("Handle client %s", client));
     try {
 
-        InputStream inputStream = this.clientSocket.getInputStream();
+      InputStream inputStream = this.clientSocket.getInputStream();
 
-        byte[] result = this.getInputStreamBytes(inputStream);
+      byte[] result = this.getInputStreamBytes(inputStream);
 
-        int idx = 0;
-        byte[] numberOfExpression = Arrays.copyOfRange(result, idx, idx + 2);
-        int l = this.convertBigEndianToInt(numberOfExpression);
+      int idx = 0;
+      byte[] numberOfExpression = Arrays.copyOfRange(result, idx, idx + 2);
+      int l = this.convertBigEndianToInt(numberOfExpression);
 
-        System.out.println(l);
+      byte[] output = this.convertIntToBigEndian(l);
 
-        byte[] output = this.convertIntToBigEndian(l);
+      idx = idx + 2;
+      while (l > 0) {
+        byte[] lengthOfExpression = Arrays.copyOfRange(result, idx, idx + 2);
+        int lenOfExpression = this.convertBigEndianToInt(lengthOfExpression);
+        idx += 2;
+        byte[] expression = Arrays.copyOfRange(result, idx, idx + lenOfExpression);
+        String stringOfExpression = new String(expression);
+        System.out.println("Expression:" + stringOfExpression);
+        int answer = this.eval(stringOfExpression);
+        System.out.println("Response:" + answer);
 
-        idx = idx + 2;
-        while (l > 0) {
-          byte[] lengthOfExpression = Arrays.copyOfRange(result, idx, idx + 2);
-          int lenOfExpression = this.convertBigEndianToInt(lengthOfExpression);
+        String stringAnswer = String.valueOf(answer);
+        int lengthOfAnswer = stringAnswer.length();
 
-          idx += 2;
-          byte[] expression = Arrays.copyOfRange(result, idx, idx + lenOfExpression);
-          String stringOfExpression = new String(expression);
+        byte[] bytesOfLengthOfAnswer = this.convertIntToBigEndian(lengthOfAnswer);
 
-          int answer = this.eval(stringOfExpression);
+        byte[] answerToBytes = stringAnswer.getBytes();
+        byte[] newOutput = new byte[output.length + bytesOfLengthOfAnswer.length
+            + answerToBytes.length];
+        System.arraycopy(output, 0, newOutput, 0, output.length);
+        System.arraycopy(bytesOfLengthOfAnswer, 0, newOutput, output.length,
+            bytesOfLengthOfAnswer.length);
+        System.arraycopy(answerToBytes, 0, newOutput, output.length + bytesOfLengthOfAnswer.length,
+            answerToBytes.length);
+        output = newOutput;
 
-          String stringAnswer = String.valueOf(answer);
-          int lengthOfAnswer = stringAnswer.length();
+        idx += lenOfExpression;
+        l--;
+      }
+      OutputStream outputStream = clientSocket.getOutputStream();
+      int start = 0;
+      while (start < output.length) {
+        byte[] tmp = Arrays.copyOfRange(output, start, min(start + BUFFER_SIZE, output.length));
+        outputStream.write(tmp);
+        start += BUFFER_SIZE;
+      }
 
-
-          byte[] bytesOfLengthOfAnswer = this.convertIntToBigEndian(lengthOfAnswer);
-
-          byte[] answerToBytes = stringAnswer.getBytes();
-          byte[] newOutput = new byte[output.length+bytesOfLengthOfAnswer.length+answerToBytes.length];
-          System.arraycopy(output, 0, newOutput , 0, output.length);
-          System.arraycopy(bytesOfLengthOfAnswer, 0, newOutput , output.length, bytesOfLengthOfAnswer.length);
-          System.arraycopy(answerToBytes,0,newOutput,output.length+bytesOfLengthOfAnswer.length,answerToBytes.length);
-          output = newOutput;
-
-          System.out.println(new String(newOutput));
-
-          idx += lenOfExpression;
-          l--;
-        }
-        OutputStream outputStream = clientSocket.getOutputStream();
-        outputStream.write(output);
-
-        clientSocket.close();
-      } catch (IOException ex) {
+      clientSocket.close();
+    } catch (IOException ex) {
       ex.printStackTrace();
     }
   }
 
   private int convertBigEndianToInt(byte[] bigEndian) {
-    int l = (int)bigEndian[1] & 0xFF;
-    l += ((int)bigEndian[0] & 0xFF) << 8;
+    int l = (int) bigEndian[1] & 0xFF;
+    l += ((int) bigEndian[0] & 0xFF) << 8;
     return l;
   }
 
@@ -85,25 +97,36 @@ public class Handler implements Runnable {
     return output;
   }
 
+  /**
+   * convert input stream to byte array
+   * @param inputStream
+   * @return byte array
+   * @throws IOException
+   */
   private byte[] getInputStreamBytes(InputStream inputStream) throws IOException {
     byte[] result = new byte[0];
     int i = 0;
-    byte[] tmp = new byte[16];
-    while((i = inputStream.read(tmp,0, 16))==16) {
+    byte[] tmp = new byte[BUFFER_SIZE];
+    while ((i = inputStream.read(tmp, 0, BUFFER_SIZE)) == BUFFER_SIZE) {
       byte[] newResult = new byte[result.length + i];
       System.arraycopy(result, 0, newResult, 0, result.length);
       System.arraycopy(tmp, 0, newResult, result.length, i);
       result = newResult;
     }
     if (i != -1) {
-      byte[] newResult = new byte[result.length+i];
-      System.arraycopy(result,0,newResult,0,result.length);
-      System.arraycopy(tmp,0,newResult,result.length,i);
+      byte[] newResult = new byte[result.length + i];
+      System.arraycopy(result, 0, newResult, 0, result.length);
+      System.arraycopy(tmp, 0, newResult, result.length, i);
       result = newResult;
     }
     return result;
   }
 
+  /**
+   * evaluate an expression
+   * @param stringOfExpression
+   * @return answer
+   */
   private int eval(String stringOfExpression) {
     int answer = 0;
     int tmpAnswer = 0;
@@ -112,16 +135,16 @@ public class Handler implements Runnable {
       if (isDigit(stringOfExpression.charAt(x))) {
         tmpAnswer = tmpAnswer * 10 + Integer.parseInt(String.valueOf(stringOfExpression.charAt(x)));
       } else if (stringOfExpression.charAt(x) == '-') {
-        answer += sign*tmpAnswer;
+        answer += sign * tmpAnswer;
         tmpAnswer = 0;
         sign = -1;
       } else {
-        answer += sign*tmpAnswer;
+        answer += sign * tmpAnswer;
         tmpAnswer = 0;
         sign = 1;
       }
     }
-    answer += sign*tmpAnswer;
+    answer += sign * tmpAnswer;
     return answer;
   }
 }

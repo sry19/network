@@ -6,7 +6,7 @@ import java.util.Arrays;
 import org.graalvm.compiler.bytecode.Bytes;
 
 public class EvalServer {
-  public static final int SERVER_PORT = 8084;
+  public static final int SERVER_PORT = 8080;
 
   public static void main(String... args) throws IOException {
     System.out.println("Eval server");
