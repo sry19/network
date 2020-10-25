@@ -14,7 +14,7 @@ public class EvalServer {
     ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
     try {
       System.out.println("Start to accept incoming connections");
-
+      Handler handler = new Handler();
       while (true) {
         // Call accept method (blocking call).
         // When a client connects, accept method will return.
@@ -22,7 +22,7 @@ public class EvalServer {
         //InputStream inputStream = clientSocket.getInputStream();
         //byte[] result = getInputStreamBytes(inputStream);
         //System.out.println(new String(result));
-        new Thread(new Handler(clientSocket)).start();
+        new Thread(handler.setSocket(clientSocket)).start();
       }
     } catch (IOException e) {
       e.printStackTrace();
