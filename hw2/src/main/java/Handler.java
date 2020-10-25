@@ -170,6 +170,12 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs +"\n";
         answer = answer + "\n";
         answer = answer + res;
+      } else {
+        answer = answer + "HTTP/1.0 404 Not Found\n";
+        answer = answer + "Content-Type: text/html\n";
+        answer = answer + "Content-Length: 9" + "\n";
+        answer = answer + "\n";
+        answer = answer + "Not Found";
       }
 
       OutputStream outputStream = clientSocket.getOutputStream();
