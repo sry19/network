@@ -47,8 +47,10 @@ public class EvalServer {
               body = s;
             }
           }
-          evalexpressions.add(date);
-          expressions.add(body);
+          if (!body.equals("")) {
+            evalexpressions.add(date);
+            expressions.add(body);
+          }
         }
 
         //InputStream inputStream = clientSocket.getInputStream();

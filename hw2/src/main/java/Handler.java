@@ -5,7 +5,10 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.Stack;
 
 public class Handler implements Runnable {
 
@@ -32,11 +35,6 @@ public class Handler implements Runnable {
   @Override
   public void run() {
     try {
-      //InputStream inputStream = clientSocket.getInputStream();
-      //byte[] result = getInputStreamBytes(inputStream);
-      //String request = new String(result);
-      //String[] req = request.split("\n");
-      //List<String> reqList = Arrays.asList(req);
       String[] firstLine = this.reqList.get(0).split(" ");
 
       String answer = "";
@@ -52,9 +50,7 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs +"\n";
         answer = answer + "\n";
         answer = answer + s;
-        //this.gettime.add(date);
       } else if (firstLine[0].equals("POST") && firstLine[1].equals("/api/evalexpression")) {
-        int idx = this.reqList.indexOf("\n");
         String body = "";
         for (String s : this.reqList) {
           if (s.matches("[\\d|\\+|\\-\\(|\\)]+")) {
@@ -64,13 +60,21 @@ public class Handler implements Runnable {
         int aws = this.eval(body);
         String line = String.valueOf(aws);
         String lenOfs = String.valueOf(line.length());
-        answer = answer + "HTTP/1.0 200 OK\n";
+        if (body.equals("")) {
+          answer = answer + "HTTP/1.0 400 Bad Request\n";
+        } else {
+          answer = answer + "HTTP/1.0 200 OK\n";
+        }
         answer = answer + "Content-Type: text/html\n";
-        answer = answer + "Content-Length: " + lenOfs +"\n";
-        answer = answer + "\n";
-        answer = answer + line;
-        //this.evalexpressions.add(date);
-        //this.expressions.add(body);
+        if (body.equals("")) {
+          answer = answer + "Content-Length: 11" + "\n";
+          answer = answer + "\n";
+          answer = answer + "Bad Request";
+        } else {
+          answer = answer + "Content-Length: " + lenOfs +"\n";
+          answer = answer + "\n";
+          answer = answer + line;
+        }
       } else if (firstLine[0].equals("GET") && firstLine[1].equals("/status.html")) {
         int countForLastMinuteGT = 0;
         int countForLastHourGT = 0;
@@ -168,28 +172,52 @@ public class Handler implements Runnable {
 
   /**
    * evaluate an expression
-   * @param stringOfExpression
+   * @param s
    * @return answer
    */
-  private int eval(String stringOfExpression) {
-    int answer = 0;
-    int tmpAnswer = 0;
-    int sign = 1;
-    for (int x = 0; x < stringOfExpression.length(); x++) {
-      if (isDigit(stringOfExpression.charAt(x))) {
-        tmpAnswer = tmpAnswer * 10 + Integer.parseInt(String.valueOf(stringOfExpression.charAt(x)));
-      } else if (stringOfExpression.charAt(x) == '-') {
-        answer += sign * tmpAnswer;
-        tmpAnswer = 0;
-        sign = -1;
+  private int eval(String s) {
+    if (s == null) {
+      return 0;
+    }
+    Queue<Character> q = new LinkedList<>();
+    for (char c : s.toCharArray()) {
+      q.offer(c);
+    }
+    q.offer('+');
+    return cal(q);
+  }
+
+  private int cal(Queue<Character> q) {
+    char sign = '+';
+    int num = 0;
+    Stack<Integer> stack = new Stack<>();
+    while (!q.isEmpty()) {
+      char c = q.poll();
+      if (c == ' ') {
+        continue;
+      }
+      if (Character.isDigit(c)) {
+        num = 10 * num + c - '0';
+      } else if (c == '(') {
+        num = cal(q);
       } else {
-        answer += sign * tmpAnswer;
-        tmpAnswer = 0;
-        sign = 1;
+        if (sign == '+') {
+          stack.push(num);
+        } else if (sign == '-') {
+          stack.push(-num);
+        }
+        num = 0;
+        sign = c;
+        if (c == ')') {
+          break;
+        }
       }
     }
-    answer += sign * tmpAnswer;
-    return answer;
+    int sum = 0;
+    while (!stack.isEmpty()) {
+      sum += stack.pop();
+    }
+    return sum;
   }
 }
 
