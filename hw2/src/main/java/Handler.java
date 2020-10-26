@@ -1,72 +1,48 @@
 import static java.lang.Character.isDigit;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import javafx.util.Pair;
 
 public class Handler implements Runnable {
 
   private Socket clientSocket;
-  private static final int BUFFER_SIZE = 16;
   private List<Date> evalexpressions;
   private List<Date> gettime;
   private List<String> expressions;
+  private List<String> reqList;
 
   /**
    * Instantiates a new Handler.
    *
    * @param clientSocket the client socket
    */
-  /**
-  public Handler(Socket clientSocket) {
+
+  public Handler(Socket clientSocket, List<Date> evalexpressions, List<Date> gettime, List<String> expressions, List<String> reqList) {
     this.clientSocket = clientSocket;
-    this.evalexpressions = new ArrayList<>();
-    this.gettime = new ArrayList<>();
-    this.expressions = new ArrayList<>();
-  }
-    **/
-  public Handler() {
-      this.evalexpressions = new ArrayList<>();
-      this.gettime = new ArrayList<>();
-      this.expressions = new ArrayList<>();
+    this.evalexpressions = evalexpressions;
+    this.gettime = gettime;
+    this.expressions = expressions;
+    this.reqList = reqList;
   }
 
-  public Handler setSocket(Socket clientSocket) {
-     this.clientSocket = clientSocket;
-     return this;
-  }
   @Override
   public void run() {
     try {
-      //BufferedReader bufferedReader = new BufferedReader(
-          //new InputStreamReader(clientSocket.getInputStream()));
-      InputStream inputStream = clientSocket.getInputStream();
-      byte[] result = getInputStreamBytes(inputStream);
-      String request = new String(result);
-      String[] req = request.split("\n");
-      List<String> reqList = Arrays.asList(req);
-      String[] firstLine = reqList.get(0).split(" ");
+      //InputStream inputStream = clientSocket.getInputStream();
+      //byte[] result = getInputStreamBytes(inputStream);
+      //String request = new String(result);
+      //String[] req = request.split("\n");
+      //List<String> reqList = Arrays.asList(req);
+      String[] firstLine = this.reqList.get(0).split(" ");
 
       String answer = "";
       SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
       Date date = new Date(System.currentTimeMillis());
       if (firstLine[0].equals("GET") && firstLine[1].equals("/api/gettime")) {
-
-        //while ((line = bufferedReader.readLine()) != null) {
-          //System.out.println(line);
-        //}
 
 
         String s = formatter.format(date);
@@ -76,11 +52,11 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs +"\n";
         answer = answer + "\n";
         answer = answer + s;
-        this.gettime.add(date);
+        //this.gettime.add(date);
       } else if (firstLine[0].equals("POST") && firstLine[1].equals("/api/evalexpression")) {
-        int idx = reqList.indexOf("\n");
+        int idx = this.reqList.indexOf("\n");
         String body = "";
-        for (String s : reqList) {
+        for (String s : this.reqList) {
           if (s.matches("[\\d|\\+|\\-\\(|\\)]+")) {
             body = s;
           }
@@ -93,8 +69,8 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs +"\n";
         answer = answer + "\n";
         answer = answer + line;
-        this.evalexpressions.add(date);
-        this.expressions.add(body);
+        //this.evalexpressions.add(date);
+        //this.expressions.add(body);
       } else if (firstLine[0].equals("GET") && firstLine[1].equals("/status.html")) {
         int countForLastMinuteGT = 0;
         int countForLastHourGT = 0;
@@ -121,7 +97,6 @@ public class Handler implements Runnable {
         int countForLastHourEV = 0;
         int countForLast24HourEV = 0;
         int countLifeTimeEV = 0;
-        System.out.println();
         for (Date prev: this.evalexpressions) {
           if ((date.getTime() - prev.getTime()) / 1000 < 60) {
             countForLastMinuteEV = countForLastMinuteEV + 1;
@@ -215,25 +190,6 @@ public class Handler implements Runnable {
     }
     answer += sign * tmpAnswer;
     return answer;
-  }
-
-  private byte[] getInputStreamBytes(InputStream inputStream) throws IOException {
-    byte[] result = new byte[0];
-    int i = 0;
-    byte[] tmp = new byte[BUFFER_SIZE];
-    while ((i = inputStream.read(tmp, 0, BUFFER_SIZE)) == BUFFER_SIZE) {
-      byte[] newResult = new byte[result.length + i];
-      System.arraycopy(result, 0, newResult, 0, result.length);
-      System.arraycopy(tmp, 0, newResult, result.length, i);
-      result = newResult;
-    }
-    if (i != -1) {
-      byte[] newResult = new byte[result.length + i];
-      System.arraycopy(result, 0, newResult, 0, result.length);
-      System.arraycopy(tmp, 0, newResult, result.length, i);
-      result = newResult;
-    }
-    return result;
   }
 }
 
