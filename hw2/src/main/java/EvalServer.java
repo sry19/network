@@ -1,9 +1,9 @@
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -15,8 +15,7 @@ public class EvalServer {
   /**
    * The constant SERVER_PORT.
    */
-  public static final int SERVER_PORT = 8080;
-  private static final int BUFFER_SIZE = 16;
+  public static final int SERVER_PORT = 8181;
 
   /**
    * The entry point of application.
@@ -39,11 +38,25 @@ public class EvalServer {
         // When a client connects, accept method will return.
         Socket clientSocket = serverSocket.accept();
 
-        InputStream inputStream = clientSocket.getInputStream();
-        byte[] result = getInputStreamBytes(inputStream);
-        String request = new String(result);
-        String[] req = request.split("\n");
-        List<String> reqList = Arrays.asList(req);
+        String line;
+        List<String> reqList = new ArrayList<>();
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+        int lenOfContent = 0;
+
+        while (true) {
+          line = bufferedReader.readLine();
+          if (line.length() == 0) {
+            break;
+          }
+          reqList.add(line);
+          if (line.startsWith("Content-Length: ")) {
+            lenOfContent = Integer.parseInt(line.substring(16));
+          }
+        }
+        char[] b = new char[lenOfContent];
+        bufferedReader.read(b,0,lenOfContent);
+        reqList.add(new String(b));
         String[] firstLine = reqList.get(0).split(" ");
 
         Date date = new Date(System.currentTimeMillis());
@@ -71,25 +84,6 @@ public class EvalServer {
     } finally {
       serverSocket.close();
     }
-  }
-
-  private static byte[] getInputStreamBytes(InputStream inputStream) throws IOException {
-    byte[] result = new byte[0];
-    int i = 0;
-    byte[] tmp = new byte[BUFFER_SIZE];
-    while ((i = inputStream.read(tmp, 0, BUFFER_SIZE)) == BUFFER_SIZE) {
-      byte[] newResult = new byte[result.length + i];
-      System.arraycopy(result, 0, newResult, 0, result.length);
-      System.arraycopy(tmp, 0, newResult, result.length, i);
-      result = newResult;
-    }
-    if (i != -1) {
-      byte[] newResult = new byte[result.length + i];
-      System.arraycopy(result, 0, newResult, 0, result.length);
-      System.arraycopy(tmp, 0, newResult, result.length, i);
-      result = newResult;
-    }
-    return result;
   }
 
   private static boolean isValid(String s) {

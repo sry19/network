@@ -55,6 +55,7 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs + "\n";
         answer = answer + "\n";
         answer = answer + s;
+        answer = answer + "\n";
       } else if (firstLine[0].equals("POST") && firstLine[1].equals("/api/evalexpression")) {
         String body = "";
         for (String s : this.reqList) {
@@ -80,6 +81,7 @@ public class Handler implements Runnable {
           answer = answer + "\n";
           answer = answer + line;
         }
+        answer = answer + "\n";
       } else if (firstLine[0].equals("GET") && firstLine[1].equals("/status.html")) {
         int countForLastMinuteGT = 0;
         int countForLastHourGT = 0;
@@ -154,12 +156,14 @@ public class Handler implements Runnable {
         answer = answer + "Content-Length: " + lenOfs + "\n";
         answer = answer + "\n";
         answer = answer + res;
+        answer = answer + "\n";
       } else {
         answer = answer + "HTTP/1.0 404 Not Found\n";
         answer = answer + "Content-Type: text/html\n";
         answer = answer + "Content-Length: 9" + "\n";
         answer = answer + "\n";
         answer = answer + "Not Found";
+        answer = answer + "\n";
       }
 
       OutputStream outputStream = clientSocket.getOutputStream();
