@@ -2,17 +2,28 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * The type Eval server.
+ */
 public class EvalServer {
 
+  /**
+   * The constant SERVER_PORT.
+   */
   public static final int SERVER_PORT = 8080;
   private static final int BUFFER_SIZE = 16;
 
+  /**
+   * The entry point of application.
+   *
+   * @param args the input arguments
+   * @throws IOException the io exception
+   */
   public static void main(String... args) throws IOException {
     System.out.println("Eval server");
     ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
@@ -35,7 +46,6 @@ public class EvalServer {
         List<String> reqList = Arrays.asList(req);
         String[] firstLine = reqList.get(0).split(" ");
 
-        SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
         Date date = new Date(System.currentTimeMillis());
 
         if (firstLine[0].equals("GET") && firstLine[1].equals("/api/gettime")) {
@@ -47,16 +57,14 @@ public class EvalServer {
               body = s;
             }
           }
-          if (!body.equals("")) {
+          if (!body.equals("") && isValid(body)) {
             evalexpressions.add(date);
             expressions.add(body);
           }
         }
 
-        //InputStream inputStream = clientSocket.getInputStream();
-        //byte[] result = getInputStreamBytes(inputStream);
-        //System.out.println(new String(result));
-        new Thread(new Handler(clientSocket,evalexpressions,gettime,expressions,reqList)).start();
+        new Thread(new Handler(clientSocket, evalexpressions, gettime, expressions, reqList))
+            .start();
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -82,5 +90,31 @@ public class EvalServer {
       result = newResult;
     }
     return result;
+  }
+
+  private static boolean isValid(String s) {
+    int l = 0;
+    int r = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == '(') {
+        l = l + 1;
+      } else if (s.charAt(i) == ')') {
+        r = r + 1;
+      }
+      if (r > l) {
+        return false;
+      }
+    }
+    if (l != r) {
+      return false;
+    }
+    for (int i = 0; i < s.length() - 1; i++) {
+      if (s.charAt(i) == '+' || s.charAt(i) == '-') {
+        if (s.charAt(i + 1) == '+' || s.charAt(i + 1) == '-' || s.charAt(i + 1) == ')') {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }

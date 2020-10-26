@@ -1,4 +1,3 @@
-import static java.lang.Character.isDigit;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,6 +9,9 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Stack;
 
+/**
+ * The type Handler.
+ */
 public class Handler implements Runnable {
 
   private Socket clientSocket;
@@ -21,10 +23,14 @@ public class Handler implements Runnable {
   /**
    * Instantiates a new Handler.
    *
-   * @param clientSocket the client socket
+   * @param clientSocket    the client socket
+   * @param evalexpressions the evalexpressions
+   * @param gettime         the gettime
+   * @param expressions     the expressions
+   * @param reqList         the req list
    */
-
-  public Handler(Socket clientSocket, List<Date> evalexpressions, List<Date> gettime, List<String> expressions, List<String> reqList) {
+  public Handler(Socket clientSocket, List<Date> evalexpressions, List<Date> gettime,
+      List<String> expressions, List<String> reqList) {
     this.clientSocket = clientSocket;
     this.evalexpressions = evalexpressions;
     this.gettime = gettime;
@@ -38,16 +44,15 @@ public class Handler implements Runnable {
       String[] firstLine = this.reqList.get(0).split(" ");
 
       String answer = "";
-      SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
+      SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z");
       Date date = new Date(System.currentTimeMillis());
       if (firstLine[0].equals("GET") && firstLine[1].equals("/api/gettime")) {
-
 
         String s = formatter.format(date);
         String lenOfs = String.valueOf(s.length());
         answer = answer + "HTTP/1.0 200 OK\n";
         answer = answer + "Content-Type: text/html\n";
-        answer = answer + "Content-Length: " + lenOfs +"\n";
+        answer = answer + "Content-Length: " + lenOfs + "\n";
         answer = answer + "\n";
         answer = answer + s;
       } else if (firstLine[0].equals("POST") && firstLine[1].equals("/api/evalexpression")) {
@@ -60,18 +65,18 @@ public class Handler implements Runnable {
         int aws = this.eval(body);
         String line = String.valueOf(aws);
         String lenOfs = String.valueOf(line.length());
-        if (body.equals("")) {
+        if (body.equals("") || (!isValid(body))) {
           answer = answer + "HTTP/1.0 400 Bad Request\n";
         } else {
           answer = answer + "HTTP/1.0 200 OK\n";
         }
         answer = answer + "Content-Type: text/html\n";
-        if (body.equals("")) {
+        if (body.equals("") || (!isValid(body))) {
           answer = answer + "Content-Length: 11" + "\n";
           answer = answer + "\n";
           answer = answer + "Bad Request";
         } else {
-          answer = answer + "Content-Length: " + lenOfs +"\n";
+          answer = answer + "Content-Length: " + lenOfs + "\n";
           answer = answer + "\n";
           answer = answer + line;
         }
@@ -80,7 +85,7 @@ public class Handler implements Runnable {
         int countForLastHourGT = 0;
         int countForLast24HourGT = 0;
         int countLifeTimeGT = 0;
-        for (Date prev: this.gettime) {
+        for (Date prev : this.gettime) {
           if ((date.getTime() - prev.getTime()) / 1000 < 60) {
             countForLastMinuteGT = countForLastMinuteGT + 1;
             countForLastHourGT = countForLastHourGT + 1;
@@ -101,17 +106,17 @@ public class Handler implements Runnable {
         int countForLastHourEV = 0;
         int countForLast24HourEV = 0;
         int countLifeTimeEV = 0;
-        for (Date prev: this.evalexpressions) {
+        for (Date prev : this.evalexpressions) {
           if ((date.getTime() - prev.getTime()) / 1000 < 60) {
             countForLastMinuteEV = countForLastMinuteEV + 1;
             countForLastHourEV = countForLastHourEV + 1;
             countForLast24HourEV = countForLast24HourEV + 1;
             countLifeTimeEV = countLifeTimeEV + 1;
-          } else if ((date.getTime() - prev.getTime()) / 1000 < 60*60) {
+          } else if ((date.getTime() - prev.getTime()) / 1000 < 60 * 60) {
             countForLastHourEV = countForLastHourEV + 1;
             countForLast24HourEV = countForLast24HourEV + 1;
             countLifeTimeEV = countLifeTimeEV + 1;
-          } else if ((date.getTime() - prev.getTime()) / 1000 < 60*60*24) {
+          } else if ((date.getTime() - prev.getTime()) / 1000 < 60 * 60 * 24) {
             countForLast24HourEV = countForLast24HourEV + 1;
             countLifeTimeEV = countLifeTimeEV + 1;
           } else {
@@ -146,7 +151,7 @@ public class Handler implements Runnable {
         String lenOfs = String.valueOf(res.length());
         answer = answer + "HTTP/1.0 200 OK\n";
         answer = answer + "Content-Type: text/html\n";
-        answer = answer + "Content-Length: " + lenOfs +"\n";
+        answer = answer + "Content-Length: " + lenOfs + "\n";
         answer = answer + "\n";
         answer = answer + res;
       } else {
@@ -163,7 +168,7 @@ public class Handler implements Runnable {
       outputStream.write(answerToBytes);
 
       clientSocket.close();
-  } catch (IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
 
@@ -172,6 +177,7 @@ public class Handler implements Runnable {
 
   /**
    * evaluate an expression
+   *
    * @param s
    * @return answer
    */
@@ -218,6 +224,32 @@ public class Handler implements Runnable {
       sum += stack.pop();
     }
     return sum;
+  }
+
+  private boolean isValid(String s) {
+    int l = 0;
+    int r = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == '(') {
+        l = l + 1;
+      } else if (s.charAt(i) == ')') {
+        r = r + 1;
+      }
+      if (r > l) {
+        return false;
+      }
+    }
+    if (l != r) {
+      return false;
+    }
+    for (int i = 0; i < s.length() - 1; i++) {
+      if (s.charAt(i) == '+' || s.charAt(i) == '-') {
+        if (s.charAt(i + 1) == '+' || s.charAt(i + 1) == '-' || s.charAt(i + 1) == ')') {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
 
