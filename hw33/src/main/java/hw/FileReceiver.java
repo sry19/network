@@ -20,7 +20,6 @@ public class FileReceiver {
     OutputStream outputStream = new FileOutputStream(file);
     while (true) {
       byte[] data = t.recv();
-      log(new String(data));
       outputStream.write(data);
       outputStream.flush();
     }

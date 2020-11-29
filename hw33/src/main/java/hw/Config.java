@@ -11,7 +11,7 @@ public class Config {
 
   // Parameters for transport protocols.
   public static final int TIMEOUT_MSEC = 150;
-  public static final int WINDOW_SIZE = 20;
+  public static final int WINDOW_SIZE = 1;
 
   // Packet size for network layer.
   public static final int MAX_SEGMENT_SIZE = 512;

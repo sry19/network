@@ -45,14 +45,14 @@ public class StopAndWait extends TransportLayer {
         byte[] slice = Arrays.copyOfRange(data, i, i+2);
         checkSum = checkSum + this.convertBigEndianToInt(slice);
       }
-      System.out.println("checksum on sender side:"+checkSum);
+      //System.out.println("checksum on sender side:"+checkSum);
       byte[] byteOfChecksum = this.convertIntToBigEndian(checkSum);
       byte[] result = new byte[typeOfData.length+bytesOfSeq.length+byteOfChecksum.length+data.length];
       System.arraycopy(typeOfData, 0, result, 0, typeOfData.length);
       System.arraycopy(bytesOfSeq,0,result,typeOfData.length,bytesOfSeq.length);
       System.arraycopy(byteOfChecksum,0,result,typeOfData.length+bytesOfSeq.length,byteOfChecksum.length);
       System.arraycopy(data,0,result,typeOfData.length+bytesOfSeq.length+byteOfChecksum.length,data.length);
-      System.out.println("whatIsend:"+Arrays.toString(result));
+      //System.out.println("whatIsend:"+Arrays.toString(result));
 
       byte[] copy = new byte[result.length];
       System.arraycopy(result,0,copy,0,result.length);
@@ -128,14 +128,14 @@ public class StopAndWait extends TransportLayer {
     int seqNum;
     byte[] payload;
     if (data.length > 6) {
-      System.out.println("receive data");
+      //System.out.println("receive data");
       byte[] typeOfData = Arrays.copyOfRange(data, 0, 2);
       byte[] byteOfSeq = Arrays.copyOfRange(data, 2, 4);
       byte[] byteOfCheckSum = Arrays.copyOfRange(data, 4, 6);
       payload = Arrays.copyOfRange(data, 6, data.length);
 
       checkSum = this.convertBigEndianToInt(byteOfCheckSum);
-      System.out.println("cs on receiver side:"+checkSum);
+      //System.out.println("cs on receiver side:"+checkSum);
       checkSum = checkSum - this.convertBigEndianToInt(typeOfData);
       checkSum = checkSum - this.convertBigEndianToInt(byteOfSeq);
 
@@ -152,8 +152,8 @@ public class StopAndWait extends TransportLayer {
       return new byte[0];
     }
     byte[] result = new byte[6];
-    System.out.println("checksum==0:"+checkSum);
-    System.out.println("seqNum==recSeq:"+seqNum+"|"+this.recSeq);
+    //System.out.println("checksum==0:"+checkSum);
+    //System.out.println("seqNum==recSeq:"+seqNum+"|"+this.recSeq);
     if ((checkSum+65536)%65536 == 0 && seqNum == this.recSeq) {
       if (this.recSeq == 0) {
         this.recSeq = 1;

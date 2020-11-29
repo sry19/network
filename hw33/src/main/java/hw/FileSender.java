@@ -20,8 +20,7 @@ public class FileSender {
     log("FileSender start");
     TransportLayer t = TransportLayerFactory.create(name, SENDER_LISTEN_PORT, RECEIVER_LISTEN_PORT);
     InputStream inputStream = new FileInputStream(file);
-    byte[] buf = new byte[2];
-    //byte[] buf = new byte[MAX_MESSAGE_SIZE];
+    byte[] buf = new byte[MAX_MESSAGE_SIZE];
     int len;
     while ((len = inputStream.read(buf)) != -1) {
       log("MSG of length " + len);
