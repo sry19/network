@@ -154,7 +154,7 @@ public class StopAndWait extends TransportLayer {
     byte[] result = new byte[6];
     System.out.println("checksum==0:"+checkSum);
     System.out.println("seqNum==recSeq:"+seqNum+"|"+this.recSeq);
-    if (checkSum == 0 && seqNum == this.recSeq) {
+    if ((checkSum+65536)%65536 == 0 && seqNum == this.recSeq) {
       if (this.recSeq == 0) {
         this.recSeq = 1;
       } else {
@@ -171,7 +171,7 @@ public class StopAndWait extends TransportLayer {
       System.arraycopy(byteOfChecksum, 0, result, ack.length+typeOfData.length, byteOfChecksum.length);
       networkLayer.send(result);
       return payload;
-    } else if (checkSum == 0 ) {
+    } else if ((checkSum+65536)%65536 == 0 ) {
       byte[] typeOfData = this.convertIntToBigEndian(Config.MSG_TYPE_ACK);
       byte[] ack = this.convertIntToBigEndian(seqNum);
       int checksum = this.convertBigEndianToInt(typeOfData);
