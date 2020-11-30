@@ -89,37 +89,39 @@ public class GoBackN extends TransportLayer {
         try {
           int b = 1;
           do {
-            //System.out.println("in the while loop");
+            System.out.println("in the while loop");
             byte[] msg = networkLayer.recv();
+            System.out.println("ack"+Arrays.toString(msg));
             //System.out.println("ack" + Arrays.toString(msg));
-            if (msg.length == 6) {
+            if (msg.length >= 6) {
               byte[] rtypeOfData = Arrays.copyOfRange(msg, 0, 2);
               byte[] rack = Arrays.copyOfRange(msg, 2, 4);
               byte[] rcheckSum = Arrays.copyOfRange(msg, 4, 6);
               if (this.convertBigEndianToInt(rtypeOfData) == Config.MSG_TYPE_ACK
                   && this.convertBigEndianToInt(rack) + this.convertBigEndianToInt(rtypeOfData)
                   == this.convertBigEndianToInt(rcheckSum) ) {
-                //System.out.println("packet is received");
 
                 //timerSem.acquire();
                 this.base = this.convertBigEndianToInt(rack) + 1;
                 //this.base >= this.nextSeqNum || this.convertBigEndianToInt(rack) + 1 >= this.nextSeqNum
                 System.out.println("base="+this.base+"|nextseqnum="+this.nextSeqNum+"|ack="+this.convertBigEndianToInt(rack));
-                if (this.base >= this.nextSeqNum) {
+                if (this.base >= this.nextSeqNum ) {
                   timer.cancel(true);
                   System.out.println("stop timer");
                   sem.release();
+                  b = 0;
                 } else {
                   System.out.println("restart timer");
                   timer = scheduler.scheduleAtFixedRate(new RetransmissionTask(result),
                       TIMEOUT_MSEC,
                       TIMEOUT_MSEC,
                       TimeUnit.MILLISECONDS);
+
                 }
                 //timerSem.release();
 
                 //sem.release();
-                b = 0;
+                //b = 0;
               }
             }
           } while (b != 0);
@@ -161,7 +163,7 @@ public class GoBackN extends TransportLayer {
     int seqNum;
     byte[] payload;
     if (data.length > 6) {
-      System.out.println("receive data");
+      //System.out.println("receive data");
       byte[] typeOfData = Arrays.copyOfRange(data, 0, 2);
       byte[] byteOfSeq = Arrays.copyOfRange(data, 2, 4);
       byte[] byteOfCheckSum = Arrays.copyOfRange(data, 4, 6);
@@ -185,11 +187,11 @@ public class GoBackN extends TransportLayer {
       return new byte[0];
     }
     byte[] result = new byte[6];
-    System.out.println("checksum==0:"+(checkSum+65536)%65536);
-    System.out.println("seqNum==expectedSeqNum:"+seqNum+"|"+this.expectedSeqNum);
+    //System.out.println("checksum==0:"+(checkSum+65536)%65536);
+    //System.out.println("seqNum==expectedSeqNum:"+seqNum+"|"+this.expectedSeqNum);
     if ((checkSum+65536)%65536 == 0 && seqNum == this.expectedSeqNum) {
       byte[] typeOfData = this.convertIntToBigEndian(Config.MSG_TYPE_ACK);
-      byte[] ack = this.convertIntToBigEndian(seqNum);
+      byte[] ack = this.convertIntToBigEndian(this.expectedSeqNum);
       int checksum = this.convertBigEndianToInt(typeOfData);
       checkSum = checksum + this.convertBigEndianToInt(ack);
       byte[] byteOfChecksum = this.convertIntToBigEndian(checkSum);
@@ -197,9 +199,10 @@ public class GoBackN extends TransportLayer {
       System.arraycopy(ack, 0, result, typeOfData.length, ack.length);
       System.arraycopy(byteOfChecksum, 0, result, ack.length+typeOfData.length, byteOfChecksum.length);
       networkLayer.send(result);
+      //System.out.println("ack"+Arrays.toString(result));
       this.expectedSeqNum = this.expectedSeqNum + 1;
       return payload;
-    } else {
+    } else  {
       byte[] typeOfData = this.convertIntToBigEndian(Config.MSG_TYPE_ACK);
       byte[] ack = this.convertIntToBigEndian(this.expectedSeqNum-1);
       int checksum = this.convertBigEndianToInt(typeOfData);
@@ -209,6 +212,7 @@ public class GoBackN extends TransportLayer {
       System.arraycopy(ack, 0, result, typeOfData.length, ack.length);
       System.arraycopy(byteOfChecksum, 0, result, ack.length+typeOfData.length, byteOfChecksum.length);
       networkLayer.send(result);
+      //System.out.println("ack*"+Arrays.toString(result));
       //String err = "duplicate";
       //byte[] error = err.getBytes();
       return new byte[0];
@@ -248,5 +252,17 @@ public class GoBackN extends TransportLayer {
     output[0] = (byte) (l >> 8 & 0xFF);
     output[1] = (byte) (l & 0xFF);
     return output;
+  }
+
+  @Override
+  public void close() throws IOException {
+    try {
+      for (int i=0 ; i<Config.WINDOW_SIZE;i++) {
+        sem.acquire();
+      }
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    super.close();
   }
 }
