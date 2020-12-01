@@ -4,7 +4,9 @@ import static hw.Config.TIMEOUT_MSEC;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,7 +50,7 @@ public class GoBackN extends TransportLayer {
   public void send(byte[] data) throws IOException {
 
     try {
-
+      //System.out.println("avail"+sem.availablePermits());
       sem.acquire();
 
       //make a packet
@@ -69,7 +71,7 @@ public class GoBackN extends TransportLayer {
       System.arraycopy(data,0,result,typeOfData.length+bytesOfSeq.length+byteOfChecksum.length,data.length);
 
       this.q.add(result);
-      System.out.println(this.q);
+      //System.out.println(this.q);
 
       //send a packet
       byte[] copy = new byte[result.length];
@@ -77,7 +79,7 @@ public class GoBackN extends TransportLayer {
       networkLayer.send(copy);
 
       if (this.base == this.nextSeqNum) {
-        System.out.println("start timer");
+        //System.out.println("start timer");
         timer = scheduler.scheduleAtFixedRate(new RetransmissionTask(this.q),
             TIMEOUT_MSEC,
             TIMEOUT_MSEC,
@@ -92,9 +94,9 @@ public class GoBackN extends TransportLayer {
         try {
           int b = 1;
           do {
-            System.out.println("in the while loop");
+            //System.out.println("in the while loop");
             byte[] msg = networkLayer.recv();
-            System.out.println("ack"+Arrays.toString(msg));
+            //System.out.println("ack"+Arrays.toString(msg));
             //System.out.println("ack" + Arrays.toString(msg));
             if (msg.length >= 6) {
               byte[] rtypeOfData = Arrays.copyOfRange(msg, 0, 2);
@@ -106,14 +108,8 @@ public class GoBackN extends TransportLayer {
 
                 this.base = this.convertBigEndianToInt(rack) + 1;
                 //this.base >= this.nextSeqNum || this.convertBigEndianToInt(rack) + 1 >= this.nextSeqNum
-                System.out.println("base="+this.base+"|nextseqnum="+this.nextSeqNum+"|ack="+this.convertBigEndianToInt(rack));
-                //for (int i=0;i<this.base-oldbase;i++) {
-                  //if (!q.isEmpty()) {
-                    //this.q.remove();
-
-                  //}
-
-                //}
+                //System.out.println("base="+this.base+"|nextseqnum="+this.nextSeqNum+"|ack="+this.convertBigEndianToInt(rack));
+                //System.out.println("oldbase"+this.oldBase);
                 while (this.oldBase < this.base) {
                   if (!this.q.isEmpty()) {
                     this.q.remove();
@@ -122,13 +118,15 @@ public class GoBackN extends TransportLayer {
                     break;
                   }
                 }
+                //System.out.println("after deque"+this.q);
                 if (this.base == this.nextSeqNum ) {
                   timer.cancel(true);
-                  System.out.println("stop timer");
+                  //System.out.println("stop timer");
                   sem.release();
+                  //System.out.println("avail"+sem.availablePermits());
                   b = 0;
                 } else {
-                  System.out.println("restart timer");
+                  //System.out.println("restart timer");
                   timer.cancel(true);
                   timer = scheduler.scheduleAtFixedRate(new RetransmissionTask(this.q),
                       TIMEOUT_MSEC,
@@ -136,7 +134,6 @@ public class GoBackN extends TransportLayer {
                       TimeUnit.MILLISECONDS);
 
                 }
-                //timerSem.release();
 
                 //sem.release();
                 //b = 0;
@@ -146,7 +143,7 @@ public class GoBackN extends TransportLayer {
           //timer.cancel(true);
           //sem.release();
         } catch (Exception e) {
-          e.printStackTrace();
+          //e.printStackTrace();
         }
       }).start();
 
@@ -237,17 +234,19 @@ public class GoBackN extends TransportLayer {
     @Override
     public void run() {
       try {
-        for (byte[] d: data) {
-          byte[] copy = new byte[d.length];
-          System.arraycopy(d, 0, copy, 0, d.length);
-          networkLayer.send(copy);
+        if (!data.isEmpty()) {
+          for (byte[] d : data) {
+            byte[] copy = new byte[d.length];
+            System.arraycopy(d, 0, copy, 0, d.length);
+            networkLayer.send(copy);
+          }
         }
 
         //System.out.println("retransmit"+Arrays.toString(copy));
 
         //System.out.println("retransmit:"+Arrays.toString(this.data));
       } catch (Exception e) {
-        e.printStackTrace();
+        //e.printStackTrace();
         //System.out.println("retransmission bug");
       }
     }
@@ -268,14 +267,19 @@ public class GoBackN extends TransportLayer {
 
   @Override
   public void close() throws IOException {
-    System.out.println(this.q);
+    //System.out.println(this.q);
+
     //q.remove();
-    System.out.println("avail size"+sem.availablePermits());
-    System.out.println(this.oldBase);
+    //System.out.println("avail size"+sem.availablePermits());
+    //System.out.println(this.oldBase+"|"+this.base);
     while (!this.q.isEmpty()) {
       //System.out.println("wait");
+      //System.out.println(this.oldBase+"|"+this.base);
     }
     //timer.cancel(true);
+    while (sem.availablePermits() < Config.WINDOW_SIZE) {
+      sem.release();
+    }
 
     super.close();
     /**
